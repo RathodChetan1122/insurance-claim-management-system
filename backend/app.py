@@ -6,29 +6,28 @@ from extensions import db, jwt, bcrypt, cors
 
 load_dotenv()
 
-
 def create_app():
     app = Flask(__name__)
 
-    # Config
+    # --- Configuration ---
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "devsecret")
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "jwtdevsecret")
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=7)
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///claims.db")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-    # Extensions
+    # --- Extensions ---
     db.init_app(app)
     jwt.init_app(app)
     bcrypt.init_app(app)
 
-    # --- UPDATED CORS LOGIC ---
-    # This reads your Render Environment Variable 'ALLOWED_ORIGINS'
-    # If not found, it defaults to "*" for local development
+    # --- Optimized CORS Logic ---
+    # This reads your Render Env Var 'ALLOWED_ORIGINS'. 
+    # For local dev, it defaults to "*" to avoid blocks.
     allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
     cors.init_app(app, resources={r"/api/*": {"origins": allowed_origins}})
 
-    # Blueprints
+    # --- Blueprints ---
     from routes.auth import auth_bp
     from routes.claims import claims_bp
     from routes.users import users_bp
@@ -37,7 +36,7 @@ def create_app():
     app.register_blueprint(claims_bp, url_prefix="/api/claims")
     app.register_blueprint(users_bp, url_prefix="/api/users")
 
-    # Health check - this is what you see when you open localhost:5000 in browser
+    # --- Health Check Route ---
     @app.route("/")
     def health():
         return jsonify({
@@ -51,7 +50,7 @@ def create_app():
             }
         })
 
-    # Create tables + seed data
+    # --- Database Initialization ---
     with app.app_context():
         db.create_all()
         seed_data()
@@ -77,9 +76,9 @@ def seed_data():
     db.session.flush()
 
     samples = [
-        {"type": "Auto",   "desc": "Car accident on NH65 highway, front bumper damage.",        "amount": 45000,  "status": "Approved",      "priority": "High",   "date": date(2025, 10, 12)},
-        {"type": "Home",   "desc": "Roof damage due to cyclone Michaung.",                       "amount": 120000, "status": "Under Review",   "priority": "Urgent", "date": date(2025, 11, 5)},
-        {"type": "Health", "desc": "Emergency hospitalization — dengue fever treatment.",        "amount": 32000,  "status": "Submitted",      "priority": "Normal", "date": date(2026, 1, 18)},
+        {"type": "Auto",   "desc": "Car accident on NH65 highway, front bumper damage.",         "amount": 45000,  "status": "Approved",      "priority": "High",   "date": date(2025, 10, 12)},
+        {"type": "Home",   "desc": "Roof damage due to cyclone Michaung.",                        "amount": 120000, "status": "Under Review",   "priority": "Urgent", "date": date(2025, 11, 5)},
+        {"type": "Health", "desc": "Emergency hospitalization — dengue fever treatment.",         "amount": 32000,  "status": "Submitted",      "priority": "Normal", "date": date(2026, 1, 18)},
         {"type": "Travel", "desc": "Flight cancellation, missed connecting flight to Dubai.",    "amount": 15000,  "status": "Rejected",       "priority": "Low",    "date": date(2025, 12, 3)},
         {"type": "Auto",   "desc": "Theft of motorcycle from parking area.",                    "amount": 68000,  "status": "Under Review",   "priority": "High",   "date": date(2026, 2, 8)},
     ]
@@ -97,6 +96,7 @@ def seed_data():
         )
         db.session.add(claim)
         db.session.flush()
+        
         hist = ClaimHistory(
             claim_id=claim.id,
             changed_by="Admin User",
@@ -109,15 +109,9 @@ def seed_data():
     db.session.commit()
     print("✅ Database seeded with demo data!")
 
-
+# Main entry point for Gunicorn
 app = create_app()
-
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
-CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
 if __name__ == "__main__":
     print("\n🚀 ClaimPortal Backend running at http://localhost:5000")
-    print("📋 API base: http://localhost:5000/api")
-    print("🔑 Admin: admin@claimportal.com / admin123")
-    print("👤 User:  chetan@example.com / chetan123\n")
     app.run(debug=True, port=5000)
