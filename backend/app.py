@@ -21,7 +21,12 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     bcrypt.init_app(app)
-    cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
+
+    # --- UPDATED CORS LOGIC ---
+    # This reads your Render Environment Variable 'ALLOWED_ORIGINS'
+    # If not found, it defaults to "*" for local development
+    allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+    cors.init_app(app, resources={r"/api/*": {"origins": allowed_origins}})
 
     # Blueprints
     from routes.auth import auth_bp
@@ -106,6 +111,9 @@ def seed_data():
 
 
 app = create_app()
+
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
 if __name__ == "__main__":
     print("\n🚀 ClaimPortal Backend running at http://localhost:5000")
